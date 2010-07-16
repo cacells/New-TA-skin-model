@@ -1,66 +1,265 @@
 /*
- * This is the Class that call the TAGrid class and runs simulations as a batch
- * for the TA model 
+ * This is a class that contains main and
+ * will call the TAGrid simulation, also displaying the results 
+ * Graphically in a window
+ * TA is for Transit Amplifying
  */
 
-import java.io.*;
 
-public class TAStaticBatch {
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 
-    double typesSum[][] = new double[50][7];
-    double typesSqrSum[][] = new double[50][7];
-	double typesProlifSum[][] = new double[50][7];
-    double typesProlifSqrSum[][] = new double[50][7];
-	double stasisSum[][] = new double[50][7];
-    double stasisSqrSum[][] = new double[50][7];
-	double stainSum[][] = new double[50][7];
-    double stainSqrSum[][] = new double[50][7];
-	double retainSum[][] = new double[50][7];
-    double retainSqrSum[][] = new double[50][7];
-	double proliferationSum[] = new double[50];
-	double proliferationSqrSum[] = new double[50];
+import javax.imageio.ImageIO;
+import javax.swing.*;
+
+import java.util.*;
+ 
+public class TAStaticBatch extends JFrame implements Runnable {
 	
-	int replicates =20; // 20 replicates for each experiment
+	int nruns = 50;
+	int celltypes = 6;
+	int replicates =20; // number of replicates for each run
+    int maxIters = 100; // number of experiment iterations per replicate
+	
+    double typesSum[][] = new double[nruns][celltypes];
+    double typesSqrSum[][] = new double[nruns][celltypes];
+	double typesProlifSum[][] = new double[nruns][celltypes];
+    double typesProlifSqrSum[][] = new double[nruns][celltypes];
+	double stasisSum[][] = new double[nruns][celltypes];
+    double stasisSqrSum[][] = new double[nruns][celltypes];
+	double stainSum[][] = new double[nruns][celltypes];
+    double stainSqrSum[][] = new double[nruns][celltypes];
+	double retainSum[][] = new double[nruns][celltypes];
+    double retainSqrSum[][] = new double[nruns][celltypes];
+	double proliferationSum[] = new double[nruns];
+	double proliferationSqrSum[] = new double[nruns];
+	
+	
+	int [] types;
+	double [] stains;
+	int proliferations;
+	int [] typeProliferations;
+	
+	double frac; // calculate fraction of SC
+	double  avProliferations;
+	double avTypes;
+	double avTypeProliferations;
+	double avStains;
+	
+
 	
 	static String fileprefix = "test";
+
+    TAGridStatic experiment;
+    Random rand = new Random();    
+	Thread runner;
+    Container mainWindow;
+	CAImagePanel CApicture;
+	Image backImg1;
+	Graphics backGr1;
+	Image backImg2;
+	Graphics backGr2;
+	JProgressBar progressBarIt,progressBarExp,progressBarRep;
+	JTextField progressMsgIt,progressMsgExp,progressMsgRep,fracMsg,fracVal;
+	JPanel buttonHolderlow;
 	
-    public double getMean(double sum) {
-		 return sum / replicates;
+	int scale = 20;//beth: could set to 1. Makes the colour transitions better?
+	int border = 20;
+	int iterations;
+	int gSize;
+    Colour palette = new Colour();
+	int[] colorindices = {45,1,5,4,2,54};//{0,1,2,54,4,5};
+	int nnw = colorindices.length-1;
+//    Color[] colours = {Color.white,Color.black,Color.green,Color.blue,Color.yellow,Color.red,Color.pink};
+    Color[] javaColours;
+    double[][] epsColours;
+    Color[] colours = {Color.black,Color.white,Color.green,Color.blue,Color.yellow,Color.red,Color.pink};
+    boolean writeImages = true;
+
+
+	public TAStaticBatch(int size) {
+		//if size ne 64 we are in trouble
+	    gSize=size;
+		setVisible(true);
+		backImg1 = createImage(scale * size, scale * size);
+		backGr1 = backImg1.getGraphics();
+		backImg2 = createImage(scale * size, scale * size);
+		backGr2 = backImg2.getGraphics();
+		setpalette();
+		
+	    int wscale = 6;//scale for main panel
+	    int btnHeight = 480-384;//found by trial and error - must be a better way!
+	    //although no buttons yet
+	    int wh = (gSize*1)*wscale + 2*border;// +btnHeight;//mainWindow height
+	    int ww = (gSize*2)*wscale + 3*border;//mainWindow width   
+	    
+		mainWindow = getContentPane();
+		mainWindow.setLayout(new BorderLayout());
+		setSize(ww,wh);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setVisible(true);
+        CApicture = new CAImagePanel(ww,wh+2*btnHeight);
+        CApicture.setBorder(border);
+        CApicture.rowstoShow = gSize;
+        mainWindow.add(CApicture,BorderLayout.CENTER);
+		setVisible(true);
+		
+		buttonHolderlow = new JPanel();
+		buttonHolderlow.setLayout(new GridLayout(2,4,10,1));
+		
+	    progressBarExp = new JProgressBar(0,nruns);
+	    progressBarExp.setValue(0);
+	    progressBarExp.setStringPainted(true);
+	    
+	    progressBarIt = new JProgressBar(0,maxIters);
+	    progressBarIt.setValue(0);
+	    progressBarIt.setStringPainted(true);   
+	    
+	    progressBarRep = new JProgressBar(0,replicates);
+	    progressBarRep.setValue(0);
+	    progressBarRep.setStringPainted(true);
+	    
+        progressMsgIt = new JTextField("Iterations % of "+maxIters);
+        progressMsgIt.setEditable(false);
+	    
+        progressMsgExp = new JTextField("Experiments % of "+nruns);
+        progressMsgExp.setEditable(false);
+	    
+        progressMsgRep = new JTextField("Replicates % of "+replicates);
+        progressMsgRep.setEditable(false);
+	    
+        fracMsg = new JTextField("SC fraction");
+        fracMsg.setEditable(false);
+
+        
+        frac = 1.0/(double)maxIters;
+        fracVal = new JTextField(""+frac);
+        fracVal.setEditable(false);
+
+	    
+        progressMsgRep = new JTextField("Replicates finished out of "+replicates);
+        progressMsgRep.setEditable(false);
+        
+	    buttonHolderlow.add(progressMsgIt);
+	    buttonHolderlow.add(progressMsgRep);
+	    buttonHolderlow.add(progressMsgExp);
+	    buttonHolderlow.add(fracMsg);
+
+	    buttonHolderlow.add(progressBarIt);
+	    buttonHolderlow.add(progressBarRep);
+	    buttonHolderlow.add(progressBarExp);
+	    buttonHolderlow.add(fracVal);
+	    
+        fracMsg.setVisible(false);
+        fracVal.setVisible(false);
+	    
+	    mainWindow.add(buttonHolderlow, BorderLayout.SOUTH);
+		setVisible(true);
+		
+		
+	}
+	//new ones
+	public void drawCA() {
+		int a;
+		for (TACell c : experiment.tissue){
+			a = c.type;
+			CApicture.drawCircleAt(c.home.x, c.home.y, javaColours[a], 1);
+		}
+	    CApicture.updateGraphic();
+	}
+	public void drawCAstain() {
+		double cstain;
+		for (TACell c : experiment.tissue){
+			//if ((c.stain < minstain) && (c.type>0)) minstain = c.stain;
+			cstain = c.stain;
+			if (c.type==1) 
+				CApicture.drawCircleAt2(c.home.x, c.home.y, palette.Javashades(cstain), 2);
+			else 
+				CApicture.drawCircleAt(c.home.x, c.home.y, palette.Javashades(cstain), 2);
+		}
+	    //outputImage();
+	    CApicture.updateGraphic();
+	}
+
+
+	public void initialise(){
+			CApicture.setScale(gSize,gSize,scale,gSize,gSize,scale);
+      	    CApicture.clearCAPanel(1);
+      	    CApicture.clearCAPanel(2);
+      	    CApicture.clearParent();
+		    iterations=0;
 	}
 	
-	public double getStandardDeviation(double sum, double sqrSum) {
-        double mean = getMean(sum);
-		double dev = (sqrSum / replicates) - (mean * mean);
-		if(dev>0){
-        	return Math.sqrt(dev);
+	
+	public void start() {
+		initialise();
+		if (runner == null) {
+			runner = new Thread(this);
 		}
-		return 0.0;
-    }
+		runner.start();
+	}
 
 
-	public void iterate(int exp, int rep){
-		double frac = (double)((exp+1)/100.0); // calculate fraction of SC
-		double  avProliferations;
-		double avTypes;
-		double avTypeProliferations;
-		double avStains;
-		int proliferations=0;
-		int [] typeProliferations = new int[7];
-		int [] types = new int[7];
-		double [] stains = new double[7];
-		TAGridStatic experiment = new TAGridStatic(64, 4, frac);
-		for(int i=0; i<100; i++){
-			if(i==89)experiment.stain();// stain all cells 10 iterations before end
+	public void run() {
+		if (runner == Thread.currentThread()) {
+			for(int exp=0; exp<nruns; exp++){// 50 sets of  experiments
+				System.out.print(exp);
+				for(int r=0; r<replicates; r++){
+					progressBarRep.setValue(r+1);
+					setOfIterations(exp,r); 
+					System.out.print("["+r+"]");
+				}
+				progressBarExp.setValue(exp+1);
+		        fracMsg.setVisible(true);
+		        fracVal.setVisible(true);
+				drawCA();
+				drawCAstain();
+				fracVal.setText(""+frac);
+				if (writeImages) CApicture.writeImage(exp);
+				System.out.println();
+			}
+		}
+	}
+	
+	public void setOfRuns(){
+		for(int i=0; i<50; i++){// 50 sets of  experiments
+			System.out.print(i);
+			for(int r=0; r<replicates; r++){
+				setOfIterations(i,r); 
+				System.out.print("["+r+"]");
+			}
+			System.out.println();
+		}
+		outputData();
+	}
+
+	public void setOfIterations(int exp,int rep){
+		//reset counters
+		types = new int[celltypes];
+		stains = new double[celltypes];
+		typeProliferations = new int[celltypes];
+		proliferations = 0;
+		frac = (double)(exp+1)/(double)(maxIters); // calculate fraction of SC
+
+
+		experiment = new TAGridStatic(64, celltypes-2, frac);//new experiment
+		
+		progressBarIt.setValue(0);
+		for(iterations=0; iterations<maxIters; iterations++){
+			progressBarIt.setValue(iterations+1);
+			if(iterations==89)experiment.stain();// stain all cells 10 iterations before end
 			experiment.iterate();
+
 		}
-		//now, after 100 iterations:
+		//now, after the 100 iterations
 		for (TACell c : experiment.tissue){
 			types[c.type]++; // count types
 			stains[c.type]+=c.stain; // calculate stain
-		}
-		//beth? another iteration?
-		experiment.iterate();
-		for (TACell c : experiment.tissue){
+			//Ric did the following after an extra iteration
 			if(c.proliferated){
 				// count proliferations in final iteration
 				proliferations++;
@@ -72,10 +271,11 @@ public class TAStaticBatch {
 				}
 			}
 		}
+		//finished counting for all cells
 		avProliferations = (double) proliferations/(64.0*64.0);// Calculate average proliferations
 		proliferationSum[exp]+=avProliferations; // add average to the array of experiments
 		proliferationSqrSum[exp]+=(avProliferations*avProliferations); // add standard deviations to the array of experiments
- 		for(int i=0; i<6; i++){
+ 		for(int i=0; i<celltypes; i++){
 			if(types[i]>0){
 				avTypeProliferations = (double)(typeProliferations[i])/(types[i]*1.0);
 			}else{
@@ -93,22 +293,33 @@ public class TAStaticBatch {
 			typesProlifSum[exp][i]+=avTypeProliferations;
 			typesProlifSqrSum[exp][i]+=(avTypeProliferations*avTypeProliferations);
 		}
-	}
-	
-	public void setOfRuns(){
-		for(int i=0; i<50; i++){// 50 sets of  experiments
-			System.out.print(i);
-			for(int r=0; r<replicates; r++){
-				iterate(i,r); 
-				System.out.print("["+r+"]");
-			}
-			System.out.println();
-		}
-		outputData();
-	}
-	
+
 		
+	}//end set of iterations
+
+    public double getMean(double sum) {
+		 return sum / replicates;
+	}
+	
+	public double getStandardDeviation(double sum, double sqrSum) {
+       double mean = getMean(sum);
+		double dev = (sqrSum / replicates) - (mean * mean);
+		if(dev>0){
+       	return Math.sqrt(dev);
+		}
+		return 0.0;
+   }
+	
+	public double getStandardDeviationGvnMean(double mean, double sqrSum) {
+			double dev = (sqrSum / replicates) - (mean * mean);
+			if(dev>0){
+	       	return Math.sqrt(dev);
+			}
+			return 0.0;
+	   }
+	
 	public void outputData(){
+		double mean;
 		// Loop through all of the array of experiments and print them out 
 		try{
 			//creates the data files for the experiments
@@ -122,7 +333,8 @@ public class TAStaticBatch {
 			bufProlif.newLine();
 			for(int i=0; i< 50; i++){
 				frac = (double)((i+1)/100.0);
-				bufProlif.write(frac+" "+getMean(proliferationSum[i])+" "+getStandardDeviation(proliferationSum[i], proliferationSqrSum[i])+" ");
+				mean = getMean(proliferationSum[i]);
+				bufProlif.write(frac+" "+mean+" "+getStandardDeviationGvnMean(mean, proliferationSqrSum[i])+" ");
 				bufProlif.newLine();	
 			}
 			bufProlif.newLine();
@@ -137,11 +349,14 @@ public class TAStaticBatch {
 				bufStain.newLine();	
 				for(int j=0; j< 50; j++){
 					frac = (double)((j+1)/100.0);
-					bufTypes.write(frac+" "+getMean(typesSum[j][i])+" "+getStandardDeviation(typesSum[j][i],typesSqrSum[j][i])+" ");
+					mean = getMean(typesSum[j][i]);
+					bufTypes.write(frac+" "+mean+" "+getStandardDeviationGvnMean(mean,typesSqrSum[j][i])+" ");
 					bufTypes.newLine();	
-					bufTypeProlif.write(frac+" "+getMean(typesProlifSum[j][i])+" "+getStandardDeviation(typesProlifSum[j][i],typesProlifSqrSum[j][i])+" ");
-					bufTypeProlif.newLine();	
-					bufStain.write(frac+" "+getMean(stainSum[j][i])+" "+getStandardDeviation(stainSum[j][i],stainSqrSum[j][i])+" ");
+					mean = getMean(typesProlifSum[j][i]);
+					bufTypeProlif.write(frac+" "+mean+" "+getStandardDeviationGvnMean(mean,typesProlifSqrSum[j][i])+" ");
+					bufTypeProlif.newLine();
+					mean = getMean(stainSum[j][i]);
+					bufStain.write(frac+" "+mean+" "+getStandardDeviationGvnMean(mean,stainSqrSum[j][i])+" ");
 					bufStain.newLine();	
 				}
 				bufTypes.newLine();	
@@ -157,15 +372,76 @@ public class TAStaticBatch {
 		}catch(IOException e){
 		}
 	}
-
-
 	
-	public static void main (String args[]) {		
-		TAStaticBatch t = new TAStaticBatch();
-		// the argument is the directory and the first part of the data name
-		if(args.length>0){
-			fileprefix = args[0];
+	public void postscriptPrint(String fileName) {
+		int xx;
+		int yy;
+		int state;
+		boolean flag;
+		try {
+			java.io.FileWriter file = new java.io.FileWriter(fileName);
+			java.io.BufferedWriter buffer = new java.io.BufferedWriter(file);
+			System.out.println(fileName);
+			buffer.write("%!PS-Adobe-2.0 EPSF-2.0");
+			buffer.newLine();
+			buffer.write("%%Title: test.eps");
+			buffer.newLine();
+			buffer.write("%%Creator: gnuplot 4.2 patchlevel 4");
+			buffer.newLine();
+			buffer.write("%%CreationDate: Thu Jun  4 14:16:00 2009");
+			buffer.newLine();
+			buffer.write("%%DocumentFonts: (atend)");
+			buffer.newLine();
+			buffer.write("%%BoundingBox: 0 0 300 300");
+			buffer.newLine();
+			buffer.write("%%EndComments");
+			buffer.newLine();
+			for (TACell c : experiment.tissue){
+				if(c.type>0){
+					xx = (c.home.x * 4) + 20;
+					yy = (c.home.y * 4) + 20;
+					if (c.proliferated) {
+						buffer.write("newpath " + xx + " " + yy + " 1.5 0 360 arc fill\n");
+						buffer.write("0 setgray\n");
+						buffer.write("newpath " + xx + " " + yy + " 1.5 0 360 arc  stroke\n");
+					} else {
+						buffer.write("0.75 setgray\n");
+						buffer.write("newpath " + xx + " " + yy + " 1.5 0 360 arc fill\n");
+					}
+				}
+			}
+			buffer.write("showpage");
+			buffer.newLine();
+			buffer.write("%%Trailer");
+			buffer.newLine();
+			buffer.write("%%DocumentFonts: Helvetica");
+			buffer.newLine();
+			buffer.close();
+		} catch (java.io.IOException e) {
+			System.out.println(e.toString());
 		}
-		t.setOfRuns();
+	}
+    public void setpalette(){
+    	int ind = colorindices.length;
+    	javaColours = new Color[ind];
+    	epsColours = new double[ind][3];
+    	for (int i=0;i<ind;i++){
+    		//System.out.println("color index "+colorindices[i]);
+    		javaColours[i] = palette.chooseJavaColour(colorindices[i]);
+    		epsColours[i] = palette.chooseEPSColour(colorindices[i]);
+    	}
+    }
+
+	public static void main(String args[]) {
+		double initalSeed = 0.1;
+		if(args.length>0){
+			fileprefix=args[0];
+			TAStaticBatch s = new TAStaticBatch(64);
+			s.start();
+		}else{
+			TAStaticBatch s = new TAStaticBatch(64);
+			s.start();
+		}
 	}
 }
+

@@ -1,4 +1,3 @@
-
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
@@ -17,7 +16,7 @@ class CAImagePanel extends JPanel {
 	    Graphics backGr,backGr2;
 		int columns, rows,columns2,rows2;
 		int xScale, yScale,xScale2,yScale2;
-		BasicStroke wideStroke = new BasicStroke(3.0f);
+		BasicStroke wideStroke = new BasicStroke(5.0f);
 		Graphics2D g2;
 		float frac = 1.0f;
 		boolean twoImage = false;
@@ -63,8 +62,7 @@ class CAImagePanel extends JPanel {
 			yScale = scale;
 			topImg= createImage(xScale*columns,yScale*rows);
 			backGr= topImg.getGraphics();
-			g2 = (Graphics2D) backGr;
-			g2.setStroke(wideStroke);
+
 			//now for the second image
 			columns2 = noColumns2;
 			rows2 = noRows2;
@@ -72,6 +70,8 @@ class CAImagePanel extends JPanel {
 			yScale2 = scale2;
 			botImg= createImage(xScale2*columns2,yScale2*rows2);
 			backGr2= botImg.getGraphics();
+			g2 = (Graphics2D) backGr2;
+			g2.setStroke(wideStroke);
 			//frac = (float)(xScale*rows)/(float)(xScale*rows + xScale2*rows2);
 			frac = (float)(xScale*columns+2*border)/(float)(xScale*columns + xScale2*columns2+3*border);
 			twoImage = true;
@@ -109,6 +109,7 @@ class CAImagePanel extends JPanel {
 		{
 			backGr.setColor(colour);
 			backGr.fillOval(x*xScale,y*yScale,xScale,yScale);
+
 		}
 		public void drawCircleAt(int x, int y, Color colour,int panelNum)
 		{
@@ -119,6 +120,19 @@ class CAImagePanel extends JPanel {
 			if (panelNum == 2){
 				backGr2.setColor(colour);
 				backGr2.fillOval(x*xScale2,y*yScale2,xScale2,yScale2);
+			}
+		}
+		public void drawCircleAt2(int x, int y, Color colour,int panelNum)
+		{
+			if (panelNum == 1){
+			backGr.setColor(colour);
+			backGr.fillOval(x*xScale,y*yScale,xScale,yScale);
+			}
+			if (panelNum == 2){
+				backGr2.setColor(colour);
+				backGr2.fillOval(x*xScale2,y*yScale2,xScale2,yScale2);
+				backGr2.setColor(Color.red);
+				backGr2.drawOval(x*xScale2,y*yScale2,xScale2,yScale2);
 			}
 		}
 		public void drawProgress(int val, int maxval, Color colour,int panelNum)

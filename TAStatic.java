@@ -45,8 +45,6 @@ public class TAStatic extends JFrame implements Runnable {
 	public TAStatic(int size, int maxC, double frac) {
 	    gSize=size;
 		experiment = new TAGridStatic(size, maxC, frac);
-		//setSize(400, 500);//window (Frame) size
-		//setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setVisible(true);
 		backImg1 = createImage(scale * size, scale * size);
 		backGr1 = backImg1.getGraphics();
@@ -70,10 +68,10 @@ public class TAStatic extends JFrame implements Runnable {
         CApicture.rowstoShow = gSize;
         mainWindow.add(CApicture,BorderLayout.CENTER);
 		setVisible(true);
-	    progressBar = new JProgressBar(0,maxIters);
-	    progressBar.setValue(25);
+	    progressBar = new JProgressBar(JProgressBar.VERTICAL,0,maxIters-1);
+	    progressBar.setValue(0);
 	    progressBar.setStringPainted(true);
-	    mainWindow.add(progressBar, BorderLayout.SOUTH);
+	    mainWindow.add(progressBar, BorderLayout.EAST);
 		setVisible(true);
 		
 	}
@@ -91,54 +89,15 @@ public class TAStatic extends JFrame implements Runnable {
 		for (TACell c : experiment.tissue){
 			//if ((c.stain < minstain) && (c.type>0)) minstain = c.stain;
 			cstain = c.stain;
-			CApicture.drawCircleAt(c.home.x, c.home.y, palette.Javashades(cstain), 2);
+			if (c.type==1) 
+				CApicture.drawCircleAt2(c.home.x, c.home.y, palette.Javashades(cstain), 2);
+			else 
+				CApicture.drawCircleAt(c.home.x, c.home.y, palette.Javashades(cstain), 2);
 		}
 	    //outputImage();
 	    CApicture.updateGraphic();
 	}
-	//old ones
-	public void olddrawCA() {
-		backGr1.setColor(Color.white);
-		int a;
-		backGr1.fillRect(0, 0, scale*gSize, scale*gSize);
-		for (TACell c : experiment.tissue){
-			a = c.type;
-			if(a<7){
-				backGr1.setColor(javaColours[a]);
-			}else{
-				backGr1.setColor(Color.orange);
-			}
-			backGr1.fillOval(c.home.x * scale, c.home.y * scale, scale, scale);
-		}
-        backGr2.drawImage(backImg1, 0, 0, gSize * scale, gSize * scale, 0, 0, scale * gSize, scale * gSize, this);
-	    repaint();//beth: calls for a screen repaint asap
-	}
-	public void olddrawCAstain() {
-		backGr1.setColor(Color.white);
-		double cstain;
-		backGr1.fillRect(0, 0, scale*gSize, scale*gSize);
-		//double minstain = 1.0;
-		for (TACell c : experiment.tissue){
-			//if ((c.stain < minstain) && (c.type>0)) minstain = c.stain;
-			cstain = c.stain;
-			backGr1.setColor(palette.Javashades(cstain));
-			backGr1.fillOval(c.home.x * scale, c.home.y * scale, scale, scale);
-		}
-		//System.out.println("min stain: "+minstain);
-        backGr2.drawImage(backImg1, 0, 0, gSize * scale, gSize * scale, 0, 0, scale * gSize, scale * gSize, this);
-	    //outputImage();
-        repaint();//beth: calls for a screen repaint asap
-	}
 
-
-
-/*	public void paint(Graphics g) {
-		if ((backImg2 != null) && (g != null)) {
-			g.drawImage(backImg2, 0, 100, 400,500,0,0,scale*gSize,scale*gSize,Color.white,this);
-			//g.drawImage(backImg2, 0, 0, this.getSize().width, this.getSize().height, -10, -92, scale * gSize + 10, scale * gSize + 10, this);
-			//g.drawImage(backImg2, 0, scale+10, this.getSize().width, scale*2, -10, 0, scale * gSize + 10, scale,this);
-		}
-	}*/
 
 	public void initialise(){
 			CApicture.setScale(gSize,gSize,scale,gSize,gSize,scale);
@@ -159,22 +118,18 @@ public class TAStatic extends JFrame implements Runnable {
 
 
 	public void run() {
-		while (iterations < maxIters) {
-		    progressBar.setValue(iterations);
-			if (runner == Thread.currentThread()) {
-			experiment.iterate();
-			//if (iterations < 89) drawCA();
-			//else 
-			if (iterations == 0) experiment.stain();
-			if (iterations%2==0){
-			drawCA();
-			drawCAstain();
-
-			if (writeImages) CApicture.writeImage(iterations);
-			}
-			iterations++;
-			//if((iterations%5)==0)postscriptPrint("TA"+iterations+".eps");
-			// This will produce a postscript output of the tissue
+		if (runner == Thread.currentThread()) {
+			for(iterations=0; iterations<100; iterations++){
+				if(iterations==89)experiment.stain();// stain all cells 10 iterations before end
+				experiment.iterate();
+				progressBar.setValue(iterations);
+				if (iterations%2==0){
+					drawCA();
+					drawCAstain();
+					if (writeImages) CApicture.writeImage(iterations);
+				}
+				//if((iterations%5)==0)postscriptPrint("TA"+iterations+".eps");
+				// This will produce a postscript output of the tissue
 			}
 		}
 	}
