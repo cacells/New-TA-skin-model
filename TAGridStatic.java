@@ -51,6 +51,8 @@ public class TAGridStatic {
 			    }
 			}
 	    } 
+		//reset the values in the static cell counting arrays
+		TACell.resetstaticcounters();
 	}//beth: end of constructor
 
 	private int bounds(int a,int size) {  // Creates the toroidal links between top and bottom and left and right
@@ -82,6 +84,22 @@ public class TAGridStatic {
 		while(growArray.size()>0){ // Randomly loop through the grow list
 			cHold=growArray.remove(rand.nextInt(growArray.size()));
 			cHold.grow();// Test to see if cell can be replaced by new proliferation
+		}
+	}
+	public void iterateandcount() {
+		//beth: 
+        TACell cHold;
+		// Create a list to hold cells that are spaces or have the capacity to detach
+        ArrayList<TACell> growArray = new ArrayList<TACell>();
+        for (TACell c : tissue) { // loop through the tissue (ArrayList of cells)
+		    c.maintainandcount(); // Calls each cell to maintain its state re: detach and/or grow
+			if(c.type==0)growArray.add(c); // If cell is a space add to grow list
+			if(c.canDetach)growArray.add(c);// If cell can detach add to grow list
+	    }
+        //beth: go through the list and see if anything grows into those spots
+		while(growArray.size()>0){ // Randomly loop through the grow list
+			cHold=growArray.remove(rand.nextInt(growArray.size()));
+			cHold.growandcount();// Test to see if cell can be replaced by new proliferation
 		}
 	}
 

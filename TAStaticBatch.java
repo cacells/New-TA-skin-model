@@ -37,21 +37,9 @@ public class TAStaticBatch extends JFrame implements Runnable {
     double retainSqrSum[][] = new double[nruns][celltypes];
 	double proliferationSum[] = new double[nruns];
 	double proliferationSqrSum[] = new double[nruns];
-	
-	
-	int [] types;
-	double [] stains;
-	int proliferations;
-	int [] typeProliferations;
-	
-	double frac; // calculate fraction of SC
-	double  avProliferations;
-	double avTypes;
-	double avTypeProliferations;
-	double avStains;
-	
 
-	
+	double frac; // calculate fraction of SC
+
 	static String fileprefix = "test";
 
     TAGridStatic experiment;
@@ -73,12 +61,11 @@ public class TAStaticBatch extends JFrame implements Runnable {
 	int gSize;
     Colour palette = new Colour();
 	int[] colorindices = {45,1,5,4,2,54};//{0,1,2,54,4,5};
-	int nnw = colorindices.length-1;
+
 //    Color[] colours = {Color.white,Color.black,Color.green,Color.blue,Color.yellow,Color.red,Color.pink};
     Color[] javaColours;
     double[][] epsColours;
-    Color[] colours = {Color.black,Color.white,Color.green,Color.blue,Color.yellow,Color.red,Color.pink};
-    boolean writeImages = true;
+    boolean writeImages = false;
 
 
 	public TAStaticBatch(int size) {
@@ -99,10 +86,10 @@ public class TAStaticBatch extends JFrame implements Runnable {
 	    
 		mainWindow = getContentPane();
 		mainWindow.setLayout(new BorderLayout());
-		setSize(ww,wh);
+		setSize(ww,wh+btnHeight);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setVisible(true);
-        CApicture = new CAImagePanel(ww,wh+2*btnHeight);
+        CApicture = new CAImagePanel(ww,wh);
         CApicture.setBorder(border);
         CApicture.rowstoShow = gSize;
         mainWindow.add(CApicture,BorderLayout.CENTER);
@@ -220,29 +207,27 @@ public class TAStaticBatch extends JFrame implements Runnable {
 				drawCAstain();
 				fracVal.setText(""+frac);
 				if (writeImages) CApicture.writeImage(exp);
-				System.out.println();
+				System.out.println("got to here");
 			}
+			outputData();
 		}
 	}
 	
-	public void setOfRuns(){
-		for(int i=0; i<50; i++){// 50 sets of  experiments
-			System.out.print(i);
-			for(int r=0; r<replicates; r++){
-				setOfIterations(i,r); 
-				System.out.print("["+r+"]");
-			}
-			System.out.println();
-		}
-		outputData();
-	}
 
 	public void setOfIterations(int exp,int rep){
+		double  avProliferations;
 		//reset counters
-		types = new int[celltypes];
-		stains = new double[celltypes];
-		typeProliferations = new int[celltypes];
-		proliferations = 0;
+		int [] types = new int[celltypes];
+		double [] stains = new double[celltypes];
+		int proliferations = 0;
+		int [] typeProliferations = new int[celltypes];
+		
+
+		double avTypes;
+		double avTypeProliferations;
+		double avStains;
+		
+
 		frac = (double)(exp+1)/(double)(maxIters); // calculate fraction of SC
 
 
@@ -259,23 +244,37 @@ public class TAStaticBatch extends JFrame implements Runnable {
 		for (TACell c : experiment.tissue){
 			types[c.type]++; // count types
 			stains[c.type]+=c.stain; // calculate stain
-			//Ric did the following after an extra iteration
+		}
+		experiment.iterateandcount();
+		for (TACell c : experiment.tissue){
+			//Ric did the following after an extra iteration bcos of cell type prob
 			if(c.proliferated){
 				// count proliferations in final iteration
 				proliferations++;
-				//beth? why are the type 3 counted with the type 2?
-				if(c.type<3){
+				//SC=type 1, TA1=type 2, TA2=3,TA3=4,TA4=5
+				//type1 prolifs have stayed as type 1, but
+				//type2 and above have had their type incremented
+				//after being marked as proliferating.
+				//corollary (unchecked): no type 2 should be marked as proliferating
+				if (c.type>2) typeProliferations[c.type-1]++;
+				else typeProliferations[c.type]++;
+				/*if(c.type<3){
 					typeProliferations[c.type]++;// count the type as it was in the iteration before the final iteration
 				}else{
 					typeProliferations[c.type-1]++;// as above
-				}
+				}*/
 			}
-		}
+		} 
 		//finished counting for all cells
 		avProliferations = (double) proliferations/(64.0*64.0);// Calculate average proliferations
+		double avProl = (double) TACell.totalproliferations/(64.0*64.0);
+		//System.out.println("Rics "+avProliferations+" New "+avProl);
 		proliferationSum[exp]+=avProliferations; // add average to the array of experiments
 		proliferationSqrSum[exp]+=(avProliferations*avProliferations); // add standard deviations to the array of experiments
- 		for(int i=0; i<celltypes; i++){
+		for(int i=0; i<celltypes; i++){
+			System.out.println("type "+i+" Rics "+typeProliferations[i]+" New "+TACell.prolifcounts[i]);
+		}
+		for(int i=0; i<celltypes; i++){
 			if(types[i]>0){
 				avTypeProliferations = (double)(typeProliferations[i])/(types[i]*1.0);
 			}else{
@@ -301,14 +300,6 @@ public class TAStaticBatch extends JFrame implements Runnable {
 		 return sum / replicates;
 	}
 	
-	public double getStandardDeviation(double sum, double sqrSum) {
-       double mean = getMean(sum);
-		double dev = (sqrSum / replicates) - (mean * mean);
-		if(dev>0){
-       	return Math.sqrt(dev);
-		}
-		return 0.0;
-   }
 	
 	public double getStandardDeviationGvnMean(double mean, double sqrSum) {
 			double dev = (sqrSum / replicates) - (mean * mean);
@@ -331,8 +322,8 @@ public class TAStaticBatch extends JFrame implements Runnable {
 			double frac=0.0;
 			bufProlif.write("SCFraction Av_proliferations stdev");
 			bufProlif.newLine();
-			for(int i=0; i< 50; i++){
-				frac = (double)((i+1)/100.0);
+			for(int i=0; i< nruns; i++){
+				frac = (double)((i+1)/(1.0*maxIters));
 				mean = getMean(proliferationSum[i]);
 				bufProlif.write(frac+" "+mean+" "+getStandardDeviationGvnMean(mean, proliferationSqrSum[i])+" ");
 				bufProlif.newLine();	
@@ -347,8 +338,8 @@ public class TAStaticBatch extends JFrame implements Runnable {
 				bufTypeProlif.newLine();	
 				bufStain.write("SCFraction "+headers[i]+" sdtev");
 				bufStain.newLine();	
-				for(int j=0; j< 50; j++){
-					frac = (double)((j+1)/100.0);
+				for(int j=0; j< nruns; j++){
+					frac = (double)((j+1)/(1.0*maxIters));
 					mean = getMean(typesSum[j][i]);
 					bufTypes.write(frac+" "+mean+" "+getStandardDeviationGvnMean(mean,typesSqrSum[j][i])+" ");
 					bufTypes.newLine();	
