@@ -216,13 +216,6 @@ public class TAStaticBatch extends JFrame implements Runnable {
 
 	public void setOfIterations(int exp,int rep){
 		double  avProliferations;
-		//reset counters
-		int [] types = new int[celltypes];
-		double [] stains = new double[celltypes];
-		int proliferations = 0;
-		int [] typeProliferations = new int[celltypes];
-		
-
 		double avTypes;
 		double avTypeProliferations;
 		double avStains;
@@ -234,54 +227,27 @@ public class TAStaticBatch extends JFrame implements Runnable {
 		experiment = new TAGridStatic(64, celltypes-2, frac);//new experiment
 		
 		progressBarIt.setValue(0);
-		for(iterations=0; iterations<maxIters; iterations++){
+		for(iterations=0; iterations<(maxIters-1); iterations++){
 			progressBarIt.setValue(iterations+1);
 			if(iterations==89)experiment.stain();// stain all cells 10 iterations before end
 			experiment.iterate();
 
 		}
-		//now, after the 100 iterations
-		for (TACell c : experiment.tissue){
-			types[c.type]++; // count types
-			stains[c.type]+=c.stain; // calculate stain
-		}
+        //count things on the last iteration
 		experiment.iterateandcount();
-		for (TACell c : experiment.tissue){
-			//Ric did the following after an extra iteration bcos of cell type prob
-			if(c.proliferated){
-				// count proliferations in final iteration
-				proliferations++;
-				//SC=type 1, TA1=type 2, TA2=3,TA3=4,TA4=5
-				//type1 prolifs have stayed as type 1, but
-				//type2 and above have had their type incremented
-				//after being marked as proliferating.
-				//corollary (unchecked): no type 2 should be marked as proliferating
-				if (c.type>2) typeProliferations[c.type-1]++;
-				else typeProliferations[c.type]++;
-				/*if(c.type<3){
-					typeProliferations[c.type]++;// count the type as it was in the iteration before the final iteration
-				}else{
-					typeProliferations[c.type-1]++;// as above
-				}*/
-			}
-		} 
 		//finished counting for all cells
-		avProliferations = (double) proliferations/(64.0*64.0);// Calculate average proliferations
-		double avProl = (double) TACell.totalproliferations/(64.0*64.0);
-		//System.out.println("Rics "+avProliferations+" New "+avProl);
+		avProliferations = (double) TACell.totalproliferations/(64.0*64.0);
 		proliferationSum[exp]+=avProliferations; // add average to the array of experiments
 		proliferationSqrSum[exp]+=(avProliferations*avProliferations); // add standard deviations to the array of experiments
+
 		for(int i=0; i<celltypes; i++){
-			System.out.println("type "+i+" Rics "+typeProliferations[i]+" New "+TACell.prolifcounts[i]);
-		}
-		for(int i=0; i<celltypes; i++){
-			if(types[i]>0){
-				avTypeProliferations = (double)(typeProliferations[i])/(types[i]*1.0);
+			if(TACell.cellcounts[i]>0){
+				avTypeProliferations = (double)(TACell.prolifcounts[i])/(TACell.cellcounts[i]*1.0);
 			}else{
 				avTypeProliferations=0.0;
 			}
-			avTypes = (double)(types[i])/(64.0*64.0);
-			avStains = (double)(stains[i])/(64.0*64.0);
+			avTypes = (double)(TACell.cellcounts[i])/(64.0*64.0);
+			avStains = (TACell.stainsums[i])/(64.0*64.0);
 			// again add results to the array of experiments
 			stainSum[exp][i]+=avStains;
 			stainSqrSum[exp][i]+=(avStains*avStains);

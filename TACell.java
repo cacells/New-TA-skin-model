@@ -18,6 +18,7 @@ class TACell{
 	
 	public static int[] cellcounts=new int[maxCycle+1];
 	public static int[] prolifcounts=new int[maxCycle+1];
+	public static double[] stainsums=new double[maxCycle+1];
 	public static int totalproliferations=0;
 	
 	public TACell(TABoxStatic home,int lin){
@@ -33,6 +34,7 @@ class TACell{
 		for (int i=0;i<maxCycle+1;i++){
 			cellcounts[i]=0;
 			prolifcounts[i]=0;
+			stainsums[i]=0.0;
 			totalproliferations = 0;
 		}
 	}
@@ -47,6 +49,7 @@ class TACell{
 	
 	public void maintainandcount(){// Determines if a Cell can detach or grow and sets counters
 		cellcounts[type]++;
+		stainsums[type] = stainsums[type] + stain;
 		canDetach=(type>=maxCycle);// For standard TA model only TA_4 can detach
 		canGrow = ((type>0)&&(type<maxCycle));// For standard TA model only TA_4 can't grow
 		if(type==1)canGrow=(rand.nextDouble()<scRate);// Rate can be different for SC (see above)
