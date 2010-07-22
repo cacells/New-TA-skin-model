@@ -207,7 +207,6 @@ public class TAStaticBatch extends JFrame implements Runnable {
 				drawCAstain();
 				fracVal.setText(""+frac);
 				if (writeImages) CApicture.writeImage(exp);
-				System.out.println("got to here");
 			}
 			outputData();
 		}

@@ -91,7 +91,8 @@ class CAImagePanel extends JPanel {
 				backGr.fillRect(0,0,xScale*columns,yScale*rows);
 			}
 			if (panelNum == 2){
-				backGr2.setColor(Jcolor);
+				//backGr2.setColor(Jcolor);
+				backGr2.setColor(Color.white);
 				backGr2.fillRect(0,0,xScale2*columns,yScale2*rows2);
 			}
 		}
