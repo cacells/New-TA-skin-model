@@ -44,7 +44,7 @@ public class TAStatic extends JFrame implements Runnable {
 
 	public TAStatic(int size, int maxC, double frac) {
 	    gSize=size;
-		experiment = new TAGridStatic(size, maxC, frac);
+		experiment = new TAGridStatic(size, maxC, frac,false);
 		setVisible(true);
 		backImg1 = createImage(scale * size, scale * size);
 		backGr1 = backImg1.getGraphics();

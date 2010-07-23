@@ -223,7 +223,7 @@ public class TAStaticBatch extends JFrame implements Runnable {
 		frac = (double)(exp+1)/(double)(maxIters); // calculate fraction of SC
 
 
-		experiment = new TAGridStatic(64, celltypes-2, frac);//new experiment
+		experiment = new TAGridStatic(64, celltypes-2, frac,false);//new experiment
 		
 		progressBarIt.setValue(0);
 		for(iterations=0; iterations<(maxIters-1); iterations++){

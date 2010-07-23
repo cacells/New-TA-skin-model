@@ -84,7 +84,7 @@ public class TAGridStatic {
 		int lineage = 0;
 		TACell cell;//just a name to use for each cell as it is placed in a home in the grid
 		int sc = (int)(gsize*gsize*frac);//beth: 64 hard coded.could use size
-		System.out.println("sc "+sc);
+		//System.out.println("sc "+sc);
 		for (k = 0; k < gsize; k++) {
 			x = k;
         	for(y=0;y<k;y++){
@@ -106,14 +106,13 @@ public class TAGridStatic {
 			tissue.add(cell);// Add new cell to list of cells that constitute the tissue
 		}
 		maxlineage = sc+1;//stem cells and spaces
-		System.out.println("lineage "+lineage);
 		while(sc>0){ // while not enough stem cells allocated
 			cell = tissue.get(rand.nextInt(tissue.size())); // Pick a cell at random from tissue list
 			if (cell.type!=1){ // If that cell is not already a stem cell type 1 
 				lineage++;
 				cell.type=1;// Chance to an SC
 				cell.lineage = lineage;
-				System.out.println("lineage "+lineage);
+				//System.out.println("lineage "+lineage);
 				sc--;
 			}
 		}

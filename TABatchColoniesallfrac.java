@@ -30,18 +30,20 @@ import java.io.*;
 
 	import java.util.*;
 	 
-	public class TABatchColonies extends JFrame implements Runnable {
+	public class TABatchColoniesallfrac extends JFrame implements Runnable {
 		
 
 		int celltypes = 6;
 		int replicates =20; // number of replicates for each run
 	    int maxIters = 100; // number of experiment iterations per replicate
+	    int nfracs = 50;
+	    int exp = 0;
 		
 		int lin=64*64;//max number of different cell lines equals cells in grid
 		double dlin = (double) lin;
 
-		double lineageSum[] = new double[maxIters];
-		double lineageSqrSum[] = new double[maxIters];
+		double lineageSum[][] = new double[nfracs][maxIters];
+		double lineageSqrSum[][] = new double[nfracs][maxIters];
 		int[][][] lineagecount;
 		
 		double frac; // calculate fraction of SC
@@ -74,7 +76,7 @@ import java.io.*;
 	    boolean writeImages = false;
 	    boolean showImages = false;
 
-		public TABatchColonies(int size) {
+		public TABatchColoniesallfrac(int size) {
 			//if size ne 64 we are in trouble
 		    gSize=size;
 			setVisible(true);
@@ -212,7 +214,7 @@ import java.io.*;
 		public void run() {
 
 			if (runner == Thread.currentThread()) {
-				int exp = 1;//cludgy way of defining SC fraction
+				for (exp=0;exp<nfracs;exp++){
 				frac = (double)(exp+1)/(double)(maxIters); // calculate fraction of SC
 
 					System.out.print(exp);
@@ -234,7 +236,9 @@ import java.io.*;
 
 						dlin = (double) lin;
 						
-						{
+						if (r==0){
+				      	    CApicture.clearCAPanel(1);
+				      	    CApicture.clearCAPanel(2);
 						drawCA();
 						drawCALineage();
 						if (writeImages) CApicture.writeImage(0);
@@ -254,12 +258,16 @@ import java.io.*;
 							}
 						}
 						System.out.print("["+r+"]");
-
+			      	    CApicture.clearCAPanel(1);
+			      	    CApicture.clearCAPanel(2);
+					drawCA();
+					drawCALineage();
+					if (writeImages) CApicture.writeImage(0);
 					}
 
-
+				}//end of frac loop
 				outputDataLin();
-			}
+			}//end if runner
 		}
 		
 		public void iterateTissue(int rep){
@@ -283,28 +291,28 @@ import java.io.*;
 			//total cell count div by number of clones
 			avLineage = (double)countLineage/(countClone*1.0);
 			//sum the average cells per clone at this iteration for all replicates
-			lineageSum[iterations]+=avLineage;
+			lineageSum[exp][iterations]+=avLineage;
 			//and its square at this iteration for all replicates
-			lineageSqrSum[iterations]+=(avLineage*avLineage);
+			lineageSqrSum[exp][iterations]+=(avLineage*avLineage);
 		}
 		public void outputDataLin(){
 			try{
-				BufferedWriter bufLineage = new BufferedWriter(new FileWriter(fileprefix+"Lineage.txt"));
-				BufferedWriter bufColonies = new BufferedWriter(new FileWriter("colonies.dat"));
+				BufferedWriter bufLineage = new BufferedWriter(new FileWriter(fileprefix+"Lineageallfrac.txt"));
+				//BufferedWriter bufColonies = new BufferedWriter(new FileWriter("colonies.dat"));
 				double mean;
+				for (int j=0;j<nfracs;j++){
 				bufLineage.write("iteration Clones stdev");
 				bufLineage.newLine();
 				for(int i=0; i< maxIters; i++){
-					mean = getMean(lineageSum[i]);
-					bufLineage.write(i+" "+mean+" "+getStandardDeviationGvnMean(mean, lineageSqrSum[i])+" ");
+					mean = getMean(lineageSum[j][i]);
+					bufLineage.write(i+" "+mean+" "+getStandardDeviationGvnMean(mean, lineageSqrSum[j][i])+" ");
 					//System.out.println(i+" "+mean+" "+getStandardDeviationGvnMean(mean, lineageSqrSum[i])+" ");
 					bufLineage.newLine();	
 				}
-				bufLineage.newLine();
-				bufLineage.newLine();
+				}
 				bufLineage.close();
 				
-				for(int r=0; r< replicates; r++){
+				/*for(int r=0; r< replicates; r++){
 				for(int i=0; i< maxIters; i++){
 					for (int j=0;j<TAGridStatic.maxlineage;j++){
 					bufColonies.write(lineagecount[r][i][j]+" ");
@@ -312,8 +320,8 @@ import java.io.*;
 					}
 					bufColonies.newLine();	
 				}
-				}
-				bufColonies.close();
+				}*/
+				//bufColonies.close();
 				System.out.println("Finished writing");
 			}
 			catch(IOException e){
@@ -351,10 +359,10 @@ import java.io.*;
 		public static void main(String args[]) {
 			if(args.length>0){
 				fileprefix=args[0];
-				TABatchColonies s = new TABatchColonies(64);
+				TABatchColoniesallfrac s = new TABatchColoniesallfrac(64);
 				s.start();
 			}else{
-				TABatchColonies s = new TABatchColonies(64);
+				TABatchColoniesallfrac s = new TABatchColoniesallfrac(64);
 				s.start();
 			}
 		}
