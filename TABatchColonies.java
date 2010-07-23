@@ -34,7 +34,7 @@ import java.io.*;
 		
 
 		int celltypes = 6;
-		int replicates =20; // number of replicates for each run
+		int replicates =2; // number of replicates for each run
 	    int maxIters = 100; // number of experiment iterations per replicate
 		
 		int lin=64*64;//max number of different cell lines equals cells in grid
@@ -42,7 +42,7 @@ import java.io.*;
 
 		double lineageSum[] = new double[maxIters];
 		double lineageSqrSum[] = new double[maxIters];
-		
+		int[][] lineagecount;
 		
 		double frac; // calculate fraction of SC
 
@@ -71,7 +71,8 @@ import java.io.*;
 //	    Color[] colours = {Color.white,Color.black,Color.green,Color.blue,Color.yellow,Color.red,Color.pink};
 	    Color[] javaColours;
 	    double[][] epsColours;
-	    boolean writeImages = true;
+	    boolean writeImages = false;
+	    boolean showImages = false;
 
 		public TABatchColonies(int size) {
 			//if size ne 64 we are in trouble
@@ -211,7 +212,7 @@ import java.io.*;
 			int countClone;
 			double avLineage;
 
-			int lineage[];
+
 
 
 			if (runner == Thread.currentThread()) {
@@ -223,12 +224,15 @@ import java.io.*;
 			        fracVal.setVisible(true);
 					fracVal.setText(""+frac);
 					for(int r=0; r<replicates; r++){
+
 						progressBarRep.setValue(r+1);
 						experiment = new TAGridStatic(64, celltypes-2, frac,true);//new experiment
 						lin = TAGridStatic.maxlineage;
+						System.out.println(" max lineage "+lin);
+						lineagecount = new int[maxIters][TAGridStatic.maxlineage];
 						dlin = (double) lin;
 						
-						if (r==0){
+						if ((showImages) && (r==0)){
 						drawCA();
 						drawCALineage();
 						if (writeImages) CApicture.writeImage(0);
@@ -239,20 +243,20 @@ import java.io.*;
 						for(iterations=0; iterations<(maxIters); iterations++){
 							progressBarIt.setValue(iterations+1);
 							if(iterations==89)experiment.stain();// stain all cells 10 iterations before end
-							lineage = new int[lin];
 							countLineage =0;
 							countClone =0;
 							experiment.iterate();
 							//cell count for each each cell line
+
 							for (TACell c : experiment.tissue){
-								lineage[c.lineage]++;
+								lineagecount[iterations][c.lineage]++;
 							}
 							//lineage[0] is the spaces so not j=0
 							for(int j=1; j<lin; j++){
 								//countClone counts number of different cell lines (clones)
-								if(lineage[j]>0)countClone++;
+								if(lineagecount[iterations][j]>0)countClone++;
 								//countLineage would be cell count
-								countLineage+=lineage[j];
+								countLineage+=lineagecount[iterations][j];
 							}
 							//total cell count div by number of clones
 							avLineage = (double)countLineage/(countClone*1.0);
@@ -260,13 +264,12 @@ import java.io.*;
 							lineageSum[iterations]+=avLineage;
 							//and its square at this iteration for all replicates
 							lineageSqrSum[iterations]+=(avLineage*avLineage);
-							if (r==0){
+							if ((showImages) && (r==0)){
 							drawCA();
 							drawCALineage();
 							if (writeImages) CApicture.writeImage(iterations+1);
 							}
 						}
-						//setOfIterations(exp,r); 
 						System.out.print("["+r+"]");
 
 					}
@@ -278,63 +281,33 @@ import java.io.*;
 		public void outputDataLin(){
 			try{
 				BufferedWriter bufLineage = new BufferedWriter(new FileWriter(fileprefix+"Lineage.txt"));
+				BufferedWriter bufColonies = new BufferedWriter(new FileWriter("colonies.dat"));
 				double mean;
 				bufLineage.write("iteration Clones stdev");
 				bufLineage.newLine();
-				for(int i=0; i< 100; i++){
+				for(int i=0; i< maxIters; i++){
 					mean = getMean(lineageSum[i]);
 					bufLineage.write(i+" "+mean+" "+getStandardDeviationGvnMean(mean, lineageSqrSum[i])+" ");
-					System.out.println(i+" "+mean+" "+getStandardDeviationGvnMean(mean, lineageSqrSum[i])+" ");
+					//System.out.println(i+" "+mean+" "+getStandardDeviationGvnMean(mean, lineageSqrSum[i])+" ");
 					bufLineage.newLine();	
 				}
 				bufLineage.newLine();
 				bufLineage.newLine();
 				bufLineage.close();
+				
+				for(int i=0; i< maxIters; i++){
+					for (int j=0;j<TAGridStatic.maxlineage;j++){
+					bufColonies.write(i+" "+j+" "+lineagecount[i][j]);
+					//System.out.println(lineagecount[i][j]);
+					bufColonies.newLine();	
+					}
+				}
+				bufColonies.close();
+				
 			}catch(IOException e){
 			}
 		}
 
-		public void setOfIterations(int exp,int rep){
-
-			int countLineage;
-			int countClone;
-			double avLineage;
-
-			int lineage[];
-
-			frac = (double)(exp+1)/(double)(maxIters); // calculate fraction of SC
-
-			experiment = new TAGridStatic(64, celltypes-2, frac,true);//new experiment
-
-			progressBarIt.setValue(0);
-			for(iterations=0; iterations<(maxIters); iterations++){
-				progressBarIt.setValue(iterations+1);
-				if(iterations==89)experiment.stain();// stain all cells 10 iterations before end
-				lineage = new int[lin];
-				countLineage =0;
-				countClone =0;
-				experiment.iterate();
-				//cell count for each each cell line
-				for (TACell c : experiment.tissue){
-					lineage[c.lineage]++;
-				}
-				//lineage[0] is the spaces so not j=0
-				for(int j=1; j<lin; j++){
-					//countClone counts number of different cell lines (clones)
-					if(lineage[j]>0)countClone++;
-					//countLineage would be cell count
-					countLineage+=lineage[j];
-				}
-				//total cell count div by number of clones
-				avLineage = (double)countLineage/(countClone*1.0);
-				//sum the average cells per clone at this iteration for all replicates
-				lineageSum[iterations]+=avLineage;
-				//and its square at this iteration for all replicates
-				lineageSqrSum[iterations]+=(avLineage*avLineage);
-			}
-			
-			
-		}
 
 
 	    public double getMean(double sum) {
