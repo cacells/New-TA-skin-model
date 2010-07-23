@@ -30,7 +30,7 @@ import java.io.*;
 
 	import java.util.*;
 	 
-	public class TAStaticBatchLin extends JFrame implements Runnable {
+	public class TABatchColonies extends JFrame implements Runnable {
 		
 
 		int celltypes = 6;
@@ -73,7 +73,7 @@ import java.io.*;
 	    double[][] epsColours;
 	    boolean writeImages = true;
 
-		public TAStaticBatchLin(int size) {
+		public TABatchColonies(int size) {
 			//if size ne 64 we are in trouble
 		    gSize=size;
 			setVisible(true);
@@ -224,7 +224,7 @@ import java.io.*;
 					fracVal.setText(""+frac);
 					for(int r=0; r<replicates; r++){
 						progressBarRep.setValue(r+1);
-						experiment = new TAGridStatic(64, celltypes-2, frac);//new experiment
+						experiment = new TAGridStatic(64, celltypes-2, frac,true);//new experiment
 						lin = TAGridStatic.maxlineage;
 						dlin = (double) lin;
 						
@@ -304,7 +304,7 @@ import java.io.*;
 
 			frac = (double)(exp+1)/(double)(maxIters); // calculate fraction of SC
 
-			experiment = new TAGridStatic(64, celltypes-2, frac);//new experiment
+			experiment = new TAGridStatic(64, celltypes-2, frac,true);//new experiment
 
 			progressBarIt.setValue(0);
 			for(iterations=0; iterations<(maxIters); iterations++){
@@ -366,10 +366,10 @@ import java.io.*;
 		public static void main(String args[]) {
 			if(args.length>0){
 				fileprefix=args[0];
-				TAStaticBatchLin s = new TAStaticBatchLin(64);
+				TABatchColonies s = new TABatchColonies(64);
 				s.start();
 			}else{
-				TAStaticBatchLin s = new TAStaticBatchLin(64);
+				TABatchColonies s = new TABatchColonies(64);
 				s.start();
 			}
 		}
