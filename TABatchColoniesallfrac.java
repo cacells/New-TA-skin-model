@@ -230,7 +230,7 @@ import java.io.*;
 					for(int r=0; r<replicates; r++){
 
 						progressBarRep.setValue(r+1);
-						experiment = new TAGridStatic(64, celltypes-2, frac,true);//new experiment
+						experiment = new TAGridStatic(64, celltypes-2, frac,false);//new experiment
 						
 						lin = TAGridStatic.maxlineage;
 
